@@ -20,6 +20,17 @@ function New-Secret([int]$bytes) {
 
 $envFile = Join-Path $root ".env"
 if (-not (Test-Path $envFile)) {
+  # Schutz: Gibt es bereits Daten, darf KEINE neue .env erzeugt werden (Schluessel wuerden nicht passen)
+  $existing = docker volume ls -q --filter "name=versicherungspilot_db-data"
+  if ($existing) {
+    Write-Host ""
+    Write-Host "Es gibt bereits gespeicherte VersicherungsPilot-Daten auf diesem PC," -ForegroundColor Yellow
+    Write-Host "aber in diesem Ordner fehlt die Datei .env mit deinen Schluesseln." -ForegroundColor Yellow
+    Write-Host "Bitte die .env aus dem bisherigen Programmordner hierher kopieren:" -ForegroundColor Yellow
+    Write-Host "  $root" -ForegroundColor Yellow
+    Write-Host "Danach start-windows.bat erneut ausfuehren." -ForegroundColor Yellow
+    Read-Host "Enter zum Beenden"; exit 1
+  }
   Write-Step "Erster Start: erzeuge geheime Schluessel (.env)"
   $hex = { param($n) ([BitConverter]::ToString((New-Secret $n)) -replace "-", "").ToLower() }
   $content = @(
@@ -43,7 +54,18 @@ if (-not (Test-Path $envFile)) {
 
 Write-Step "Baue und starte VersicherungsPilot (beim ersten Mal einige Minuten)"
 docker compose up -d --build
-if ($LASTEXITCODE -ne 0) { Write-Host "Start fehlgeschlagen - siehe Meldungen oben." -ForegroundColor Red; Read-Host "Enter zum Beenden"; exit 1 }
+if ($LASTEXITCODE -ne 0) {
+  Write-Host ""
+  Write-Host "Start fehlgeschlagen. Details der Datenbank-Einrichtung:" -ForegroundColor Red
+  docker compose logs --tail 15 migrate
+  $log = (docker compose logs migrate) -join "`n"
+  if ($log -match "password authentication failed") {
+    Write-Host ""
+    Write-Host "Ursache: Die .env in diesem Ordner passt nicht zu deinen gespeicherten Daten." -ForegroundColor Yellow
+    Write-Host "Bitte die .env aus dem bisherigen Programmordner hierher kopieren (ersetzen) und erneut starten." -ForegroundColor Yellow
+  }
+  Read-Host "Enter zum Beenden"; exit 1
+}
 
 $port = (Get-Content $envFile | Where-Object { $_ -match '^PORT=' }) -replace 'PORT=', ''
 if (-not $port) { $port = "3000" }

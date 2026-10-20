@@ -34,7 +34,7 @@ Beim ersten Start entsteht im Ordner die Datei **`.env`** mit deinen geheimen Sc
 
 ## Update auf eine neue Version
 1. Neue ZIP von GitHub herunterladen und entpacken.
-2. **Deine `.env` aus dem alten Ordner in den neuen kopieren.**
+2. **Deine `.env` aus dem alten Ordner in den neuen kopieren – BEVOR du dort `start-windows.bat` startest.** (Unsichtbar? Explorer → Ansicht → Einblenden → „Ausgeblendete Elemente“.)
 3. `stop-windows.bat` im alten Ordner, dann `start-windows.bat` im neuen Ordner. Deine Daten bleiben erhalten.
 
 ## KI-Funktionen aktivieren (optional)
@@ -55,6 +55,7 @@ Beim ersten Start entsteht im Ordner die Datei **`.env`** mit deinen geheimen Sc
 | Seite lädt nicht | Im Ordner in der Adresszeile `cmd` eingeben, Enter, dann `docker compose logs app` |
 | Dokument bleibt bei „Text wird erkannt“ | `docker compose logs worker` ansehen |
 | Bei vielen Registrierungen „Zu viele Versuche“ | Schutzfunktion: max. 5 neue Konten pro 5 Minuten – kurz warten |
+| „service migrate didn't complete successfully“ | Meist fehlt die richtige `.env`: die `.env` aus dem bisherigen Ordner in den aktuellen kopieren (ersetzen) und neu starten. Details: `docker compose logs migrate` |
 | Alles komplett entfernen (inkl. aller Daten!) | `docker compose down -v` im Ordner ausführen |
 
 Bitte nur über **http://localhost:3000** öffnen (nicht über `127.0.0.1`), sonst funktioniert die Anmeldung nicht.

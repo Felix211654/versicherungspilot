@@ -3,6 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 docker info >/dev/null 2>&1 || { echo "Docker läuft nicht – bitte Docker starten."; exit 1; }
+if [ ! -f .env ] && [ -n "$(docker volume ls -q --filter name=versicherungspilot_db-data)" ]; then
+  echo "Es gibt bereits gespeicherte Daten, aber hier fehlt die .env mit deinen Schlüsseln."
+  echo "Bitte die .env aus dem bisherigen Programmordner hierher kopieren und erneut starten."
+  exit 1
+fi
 if [ ! -f .env ]; then
   echo "Erster Start: erzeuge geheime Schlüssel (.env) – Datei sicher aufbewahren!"
   cat > .env <<ENV
@@ -17,7 +22,11 @@ ANTHROPIC_API_KEY=
 AI_MODEL=claude-opus-5-5
 ENV
 fi
-docker compose up -d --build
+if ! docker compose up -d --build; then
+  docker compose logs --tail 15 migrate
+  docker compose logs migrate | grep -q "password authentication failed" && echo "Ursache: Die .env passt nicht zu den gespeicherten Daten – bitte die bisherige .env hierher kopieren."
+  exit 1
+fi
 PORT=$(grep '^PORT=' .env | cut -d= -f2); PORT=${PORT:-3000}
 echo "Warte auf http://localhost:$PORT …"
 for _ in $(seq 1 120); do curl -sf "http://localhost:$PORT/anmelden" >/dev/null && break; sleep 3; done
