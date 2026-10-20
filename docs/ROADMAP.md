@@ -5,7 +5,7 @@ Priorisiert nach Nutzen für einen sicheren, funktionsfähigen Kern.
 ## Zur Fertigstellung (Konfiguration, kein Code)
 1. `ANTHROPIC_API_KEY` setzen, `npm run eval:ai` ausführen, Ergebnisse gegen die Kriterien in QUALITAET.md prüfen, ggf. Prompts/Modell (`AI_MODEL`) anpassen.
 2. `VOYAGE_API_KEY` + `EMBEDDING_PROVIDER=voyage` für semantische Suche; bestehende Dokumente per „Analyse erneut ausführen“ indexieren.
-3. ClamAV betreiben (`docker compose --profile security up -d clamav`, `CLAMAV_HOST=localhost`).
+3. ClamAV betreiben (`docker compose -f docker-compose.dev.yml --profile security up -d clamav`, `CLAMAV_HOST=localhost`).
 4. S3-Bucket (EU) konfigurieren und Upload/Download/Löschung in Staging testen.
 5. Backups + Wiederherstellungstest (BETRIEB.md).
 

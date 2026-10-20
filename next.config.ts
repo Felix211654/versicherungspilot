@@ -21,7 +21,6 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  output: "standalone",
   serverExternalPackages: ["pg-boss", "mammoth", "@aws-sdk/client-s3"],
   turbopack: {
     rules: {
@@ -45,7 +44,8 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "Permissions-Policy", value: "geolocation=(), microphone=(), payment=(), usb=()" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          ...(isDev ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
+          // HSTS nur bei HTTPS-Betrieb (nicht beim lokalen Paket auf http://localhost)
+          ...(isDev || !(process.env.BETTER_AUTH_URL ?? "").startsWith("https://") ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
         ],
       },
     ];

@@ -1,16 +1,69 @@
-# Lokale Infrastruktur (Entwicklung). App/Worker laufen per npm run dev / npm run worker.
+# VersicherungsPilot – Komplettpaket für den lokalen Betrieb (Windows/Mac/Linux mit Docker Desktop).
+# Start: start-windows.bat (bzw. ./start.sh) – oder: docker compose up -d --build
+# Daten liegen in Docker-Volumes und bleiben bei Neustarts erhalten.
+name: versicherungspilot
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://vp:${POSTGRES_PASSWORD}@db:5432/versicherungspilot
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+  BETTER_AUTH_URL: http://localhost:${PORT:-3000}
+  FILE_ENCRYPTION_KEY: ${FILE_ENCRYPTION_KEY}
+  DOWNLOAD_SIGNING_SECRET: ${DOWNLOAD_SIGNING_SECRET}
+  STORAGE_DRIVER: local
+  STORAGE_LOCAL_DIR: /data/storage
+  TMP_DIR: /data/tmp
+  AI_PROVIDER: ${AI_PROVIDER:-none}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  AI_MODEL: ${AI_MODEL:-claude-opus-5-5}
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-none}
+  VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+
 services:
-  postgres:
+  db:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: vp
-      POSTGRES_PASSWORD: vp_dev_pw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: versicherungspilot
-    ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
-  clamav:
-    image: clamav/clamav:stable
-    ports: ["3310:3310"]
-    profiles: ["security"]
+    volumes: ["db-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vp -d versicherungspilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build: .
+    image: versicherungspilot:local
+    pull_policy: build
+    command: ["npm", "run", "db:migrate"]
+    environment: *app-env
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  app:
+    image: versicherungspilot:local
+    pull_policy: never
+    restart: unless-stopped
+    environment: *app-env
+    # nur auf diesem PC erreichbar (nicht im Netzwerk)
+    ports: ["127.0.0.1:${PORT:-3000}:3000"]
+    volumes: ["files:/data"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    image: versicherungspilot:local
+    pull_policy: never
+    restart: unless-stopped
+    command: ["npm", "run", "worker"]
+    environment: *app-env
+    volumes: ["files:/data"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
 volumes:
-  pgdata:
+  db-data:
+  files:

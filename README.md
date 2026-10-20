@@ -23,12 +23,16 @@ Persönlicher, datenschutzbewusster KI-Versicherungsmanager für Privatpersonen:
 | Virenscan | ⚙️ ClamAV-Anbindung implementiert, **nicht konfiguriert** → Dateien „nicht geprüft“ |
 | E-Mail-Import, Vergleichsangebote, Haushalts-Mitglieder, Rechtsquellen-Abruf | ❌ noch nicht umgesetzt (siehe [docs/ROADMAP.md](docs/ROADMAP.md)) |
 
-## Schnellstart (lokal)
+## Auf dem Windows-PC nutzen (ohne Programmierkenntnisse)
+
+Docker Desktop installieren, Ordner herunterladen, **`start-windows.bat`** doppelklicken, im Browser **http://localhost:3000** öffnen. Schritt-für-Schritt: **[ANLEITUNG-WINDOWS.md](ANLEITUNG-WINDOWS.md)**. (macOS/Linux: `./start.sh`.)
+
+## Schnellstart für Entwickler (lokal)
 
 Voraussetzungen: Node.js 22, PostgreSQL 16 mit `pgvector` und `pg_trgm`, `poppler-utils`, `tesseract-ocr` (+ `tesseract-ocr-deu`).
 
 ```bash
-docker compose up -d postgres          # oder eigene PostgreSQL-Instanz
+docker compose -f docker-compose.dev.yml up -d postgres   # oder eigene PostgreSQL-Instanz
 cp .env.example .env                   # Secrets erzeugen (Befehle stehen in der Datei)
 npm ci
 npm run db:migrate

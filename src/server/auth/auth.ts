@@ -49,7 +49,8 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    useSecureCookies: e.NODE_ENV === "production",
+    // Secure-Cookies in Produktion; Ausnahme: lokaler Betrieb über http://localhost (Windows-Paket)
+    useSecureCookies: e.NODE_ENV === "production" && e.BETTER_AUTH_URL.startsWith("https://"),
     cookiePrefix: "vp",
   },
   databaseHooks: {
