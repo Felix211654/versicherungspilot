@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VersicherungsPilot
 
-## Getting Started
+Persönlicher, datenschutzbewusster KI-Versicherungsmanager für Privatpersonen: Unterlagen zentral und verschlüsselt ablegen, Verträge automatisch erkennen und prüfen, Fragen aus den eigenen Unterlagen **mit überprüfbaren Fundstellen** beantworten, Schadenfälle vorbereiten und Fristen im Blick behalten.
 
-First, run the development server:
+> Keine Rechts- oder Versicherungsberatung. Einschätzungen sind vorläufig, Entwürfe werden nie automatisch versendet.
+
+## Stand der Umsetzung (ehrlich)
+
+| Bereich | Status |
+|---|---|
+| Auth (E-Mail/Passwort, Sitzungen, TOTP-2FA, Rate-Limits in Produktion) | ✅ funktionsfähig, getestet |
+| Verschlüsselte Ablage (AES-256-GCM, Envelope), signierte Kurzzeit-Links | ✅ lokal getestet; S3-Treiber implementiert, **nicht gegen echten Bucket getestet** |
+| Upload → Validierung → Text/OCR → Klassifikation → Extraktion mit Fundstelle → Zuordnung → Chunks → Fristen | ✅ Ende-zu-Ende getestet (PDF, Scan/PNG; DOCX implementiert) |
+| Prüfung/Korrektur erkannter Angaben, Vertrag aus Dokument anlegen | ✅ |
+| Volltextsuche (deutsch, Präfix für Komposita) | ✅ |
+| Semantische Suche (pgvector) | ⚙️ implementiert, **benötigt `EMBEDDING_PROVIDER=voyage` + Key**; ohne Key: Volltext (wird angezeigt) |
+| KI-Antworten mit Belegprüfung, Fallprüfung, KI-Zusammenfassungen | ⚙️ implementiert und mit Test-Provider geprüft; **benötigt `AI_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` + Einwilligung des Nutzers**. Ohne Key: „Nur Fundstellen“-Modus, ausdrücklich gekennzeichnet |
+| Schadenfälle: Erfassung, Rückfragen, Vertragsabgleich, Aufgaben, Nachweise, Kommunikation, Status, Verlauf | ✅ |
+| Entwürfe (9 Arten) ohne erfundene Angaben, Platzhalter `[OFFEN: …]`, Download/Druck | ✅ |
+| Fristen: Ableitung mit Berechnungsgrundlage, Erkennung aus Schreiben, Bestätigung, Erinnerungen (Hintergrundjob) | ✅ In-App-Benachrichtigungen; **E-Mail-Versand nicht implementiert** |
+| Analyse: Kosten, Überschneidungen, Lücken, fehlende Unterlagen, SB, Deckungssummen, Beitragssteigerungen, Vergleich | ✅ regelbasiert |
+| Export (ZIP + JSON + CSV), Kontolöschung inkl. abgeleiteter Daten | ✅ getestet |
+| Virenscan | ⚙️ ClamAV-Anbindung implementiert, **nicht konfiguriert** → Dateien „nicht geprüft“ |
+| E-Mail-Import, Vergleichsangebote, Haushalts-Mitglieder, Rechtsquellen-Abruf | ❌ noch nicht umgesetzt (siehe [docs/ROADMAP.md](docs/ROADMAP.md)) |
+
+## Schnellstart (lokal)
+
+Voraussetzungen: Node.js 22, PostgreSQL 16 mit `pgvector` und `pg_trgm`, `poppler-utils`, `tesseract-ocr` (+ `tesseract-ocr-deu`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up -d postgres          # oder eigene PostgreSQL-Instanz
+cp .env.example .env                   # Secrets erzeugen (Befehle stehen in der Datei)
+npm ci
+npm run db:migrate
+npm run dev                            # Web-App   → http://localhost:3000
+npm run worker                         # Hintergrund-Worker (zweites Terminal) – nötig für OCR/Analyse/Erinnerungen
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### KI aktivieren
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-…
+AI_MODEL=claude-opus-5-5               # Standard; günstiger: claude-sonnet-5-5 / claude-haiku-5-5
+EMBEDDING_PROVIDER=voyage              # optional, semantische Suche
+VOYAGE_API_KEY=…
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Danach erteilt jeder Nutzer unter *Einstellungen → KI und externe Dienste* seine Einwilligung. Vorher wird nichts übertragen. Vor Produktivbetrieb: Auftragsverarbeitungsvertrag, Speicherort und Aufbewahrung beim Anbieter prüfen (siehe [docs/SICHERHEIT.md](docs/SICHERHEIT.md)).
 
-## Learn More
+## Skripte
 
-To learn more about Next.js, take a look at the following resources:
+| Befehl | Zweck |
+|---|---|
+| `npm run dev` / `build` / `start` | Web-App |
+| `npm run worker` | Worker (Dokumentverarbeitung, tägliche Erinnerungen 06:00 Europe/Berlin) |
+| `npm run db:generate` / `db:migrate` | Migrationen erzeugen / anwenden |
+| `npm run test:unit` | Unit-Tests (Extraktion, Chunking, Fristen, Krypto) |
+| `npm run test:integration` | Integrationstests gegen `versicherungspilot_test` (`.env.test`) |
+| `npm run test:e2e` | Playwright, Desktop + Smartphone (App + Worker müssen laufen bzw. werden gestartet) |
+| `npm run eval:ai` | KI-Evaluierung mit synthetischem Fallkatalog (nur mit konfiguriertem Anbieter) |
+| `npx tsx scripts/make-fixtures.ts` | synthetische Testunterlagen erzeugen |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Dokumentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Architektur, Datenmodell, Entscheidungen](docs/ARCHITEKTUR.md)
+- [Sicherheit, Datenschutz, rechtliche Einordnung](docs/SICHERHEIT.md)
+- [Betrieb, Deployment, Backups, Kosten](docs/BETRIEB.md)
+- [Qualität, Tests, KI-Evaluierung, Akzeptanzkriterien](docs/QUALITAET.md)
+- [Roadmap / offene Punkte](docs/ROADMAP.md)
