@@ -66,6 +66,8 @@ const DOC_RULES: Record<Exclude<DocType, "sonstiges">, Rule[]> = {
   produktinformation: [
     { re: /produktinformationsblatt|informationsblatt zu versicherungsprodukten/i, w: 5 },
     { re: /\btarifbeschreibung\b|\bleistungsübersicht\b/i, w: 3 },
+    { re: /\bproduktblatt\b|\bproduktinformation(en)?\b/i, w: 5 },
+    { re: /\bproduktlinie(n)?\b|\bleistungsbausteine?\b|\bleistungsunterschiede\b|\btarifvarianten?\b/i, w: 2 },
     { re: /\bwelche art der versicherung ist das\b/i, w: 3 },
   ],
   nachtrag: [

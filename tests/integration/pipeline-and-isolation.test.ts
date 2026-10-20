@@ -141,3 +141,32 @@ describe("Test 11 – Fehlerbehandlung", () => {
     expect(dup).toMatchObject({ ok: false, duplicateOf: avbId });
   });
 });
+
+describe("Regression: sehr hohe Deckungssummen (Kfz 100 Mio. €)", () => {
+  it("verarbeitet Beträge über 21 Mio. € ohne Datenbankfehler und übernimmt sie als Klausel", async () => {
+    const { PDFDocument, StandardFonts } = await import("pdf-lib");
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const page = doc.addPage([595, 842]);
+    ["Produktinformationsblatt Kfz-Versicherung", "Versicherungsschein-Nr.: KFZ-100-2026", "In der Kfz-Haftpflichtversicherung gilt eine pauschale Versicherungssumme von 100 Mio. Euro.", "Selbstbeteiligung je Schadenfall 300,00 EUR"].forEach((t, i) =>
+      page.drawText(t, { x: 50, y: 780 - i * 20, size: 10, font }),
+    );
+    const pol = await createPolicy(a, { name: "Kfz", category: "kfz", policyNumber: "KFZ-100-2026", status: "active" });
+    const r = await uploadDocument(a, { name: "kfz.pdf", data: Buffer.from(await doc.save()) });
+    if (!r.ok) throw new Error(r.error);
+    await processDocumentVersion(r.versionId, a.householdId);
+    const d = await getDocument(a.householdId, r.documentId);
+    expect(d?.current?.status).not.toBe("failed");
+    expect(d?.doc.policyId).toBe(pol);
+    const terms = await db.select().from(schema.policyTerm).where(eq(schema.policyTerm.sourceDocumentId, r.documentId));
+    expect(terms.find((t) => t.kind === "coverage")?.amountCents).toBe(10_000_000_000);
+  });
+});
+
+describe("Fehlermeldungen", () => {
+  it("zeigt keine SQL-Statements an", async () => {
+    const { safeErrorMessage } = await import("@/server/lib/logger");
+    const err = new Error('Failed query: insert into "policy_term" values ($1)', { cause: new Error('value "10000000000" is out of range for type integer') });
+    expect(safeErrorMessage(err)).toBe('Interner Datenbankfehler (value "10000000000" is out of range for type integer)');
+  });
+});

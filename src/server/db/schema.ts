@@ -4,7 +4,7 @@
  * Grundregeln:
  * - Jede fachliche Tabelle trägt `householdId` (Mandantentrennung). Zugriffe filtern
  *   IMMER serverseitig auf den Haushalt der Sitzung (siehe server/auth/session.ts).
- * - Geldbeträge: Integer in Cent + ISO-Währung. Datumsangaben ohne Uhrzeit: `date`.
+ * - Geldbeträge: Integer in Cent + ISO-Währung (Deckungssummen als bigint – z. B. 100 Mio. € = 10^10 Cent). Datumsangaben ohne Uhrzeit: `date`.
  * - Laufzeit, Kündigungsfrist und Meldefristen sind getrennte Felder/Entitäten.
  * - Automatisch erkannte Angaben tragen Quelle (Dokument/Seite/Textausschnitt),
  *   Methode, Qualitätsindikator und Überprüfungsstatus.
@@ -292,7 +292,7 @@ export const insuredObject = pgTable(
     kind: text("kind").notNull(), // z. B. Fahrzeug, Wohnung, Gebäude, Tier, Gerät
     description: text("description").notNull(),
     identifier: text("identifier"), // Kennzeichen, Adresse, Seriennummer …
-    valueCents: integer("value_cents"),
+    valueCents: bigint("value_cents", { mode: "number" }),
     createdAt: createdAt(),
   },
   (t) => [index("insured_object_policy_idx").on(t.policyId)],
@@ -520,7 +520,7 @@ export const policyTerm = pgTable(
     kind: policyTermKind("kind").notNull(),
     title: text("title").notNull(),
     description: text("description"),
-    amountCents: integer("amount_cents"),
+    amountCents: bigint("amount_cents", { mode: "number" }),
     currency: text("currency").default("EUR"),
     /** Prozentuale Angaben (z. B. SB 10 %) in Basispunkten */
     percentBp: integer("percent_bp"),
@@ -687,7 +687,7 @@ export const claim = pgTable(
     location: text("location"),
     ownerOfDamagedItem: text("owner_of_damaged_item"),
     causedBy: text("caused_by"),
-    estimatedDamageCents: integer("estimated_damage_cents"),
+    estimatedDamageCents: bigint("estimated_damage_cents", { mode: "number" }),
     alreadyReported: boolean("already_reported"),
     acuteDanger: boolean("acute_danger").notNull().default(false),
     status: claimStatus("status").notNull().default("draft"),

@@ -101,3 +101,12 @@ describe("Regressionen", () => {
     expect(r.confidence).toBe("high");
   });
 });
+
+describe("Produktblätter", () => {
+  it("erkennt ein Kfz-Produktblatt als Tarif-/Produktinformation", () => {
+    const text = "Produktblatt für die Kraftfahrtversicherung\nUnsere Kfz-Versicherung bietet zwei Produktlinien und verschiedene Leistungsbausteine.\nWelche Leistungsunterschiede gibt es?";
+    const pages = [{ pageNo: 1, text, method: "pdf_text" as const }];
+    expect(classifyDocument(pages, "KFZ-Produktblatt.pdf").value).toBe("produktinformation");
+    expect(classifyCategory(pages, "KFZ-Produktblatt.pdf").value).toBe("kfz");
+  });
+});

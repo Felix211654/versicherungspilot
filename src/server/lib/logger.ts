@@ -21,5 +21,10 @@ export const logger = {
 /** Kürzt Fehlermeldungen und entfernt mögliche Inhalte, bevor sie gespeichert/angezeigt werden. */
 export function safeErrorMessage(err: unknown): string {
   const m = err instanceof Error ? err.message : String(err);
+  // Datenbankfehler: keine SQL-Statements/Parameter anzeigen, nur die eigentliche Ursache
+  if (m.startsWith("Failed query")) {
+    const cause = err instanceof Error && err.cause instanceof Error ? err.cause.message : "unbekannte Ursache";
+    return `Interner Datenbankfehler (${cause.slice(0, 200)})`;
+  }
   return m.slice(0, 300);
 }
