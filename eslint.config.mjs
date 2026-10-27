@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Eigenständige statische App ohne Build-Kette
+    "weinmaster60/**",
   ]),
 ]);
 
